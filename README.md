@@ -4,9 +4,11 @@
 [![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A minimal macOS menubar app for managing [Podman](https://podman.io/) machines, containers, and images.
+A minimal macOS menubar app for managing [Podman](https://podman.io/) machines, containers, and images. For those who don't really pay attention to their machines but required them to run their projects.
 
 > **Note:** This is an unofficial community project and is not affiliated with the Podman project or Red Hat.
+
+![PodmanBar Screenshot](./ss.png)
 
 ## Features
 
