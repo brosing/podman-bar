@@ -1,6 +1,12 @@
 # PodmanBar
 
-A minimal macOS menubar app for managing Podman machines, containers, and images.
+[![macOS](https://img.shields.io/badge/platform-macOS-blue)](https://developer.apple.com/macos/)
+[![Swift](https://img.shields.io/badge/Swift-5.9-orange.svg)](https://swift.org)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+A minimal macOS menubar app for managing [Podman](https://podman.io/) machines, containers, and images.
+
+> **Note:** This is an unofficial community project and is not affiliated with the Podman project or Red Hat.
 
 ## Features
 
@@ -126,8 +132,22 @@ podman machine start
 
 ## License
 
-This project is provided as-is for educational and personal use.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Feel free to submit issues and pull requests to improve the app.
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+Please read our [issue templates](.github/ISSUE_TEMPLATE/) for bug reports and feature requests.
+
+## Acknowledgments
+
+- Built with [SwiftUI](https://developer.apple.com/xcode/swiftui/)
+- Podman integration via [Podman CLI](https://podman.io/)
+- Inspired by the macOS ecosystem of menubar utilities
