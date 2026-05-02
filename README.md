@@ -22,7 +22,7 @@ A minimal macOS menubar app for managing [Podman](https://podman.io/) machines, 
 
 ## Requirements
 
-- macOS 26.4+ (Sequoia)
+- macOS 14.6+ (Sequoia)
 - Podman installed (auto-detected at common paths)
 - Apple Development account for signing
 
