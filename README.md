@@ -1,0 +1,133 @@
+# PodmanBar
+
+A minimal macOS menubar app for managing Podman machines, containers, and images.
+
+## Features
+
+- **Menubar-only app**: Runs in the menubar without appearing in the dock
+- **Simple Menu Interface**: Native macOS menu with sections and separators
+- **Machine Management**: Start and stop Podman machines with visual status indicators
+- **Container Overview**: View running containers with port information
+- **Image Management**: List available Docker/Podman images
+- **Real-time Updates**: Auto-refresh every 5 seconds, manual refresh with ⌘R
+- **Clean UI**: Sectioned menu following Apple's HIG guidelines
+
+## Requirements
+
+- macOS 26.4+ (Sequoia)
+- Podman installed (auto-detected at common paths)
+- Apple Development account for signing
+
+## Installation
+
+1. Clone this repository
+2. Open `PodmanBar.xcodeproj` in Xcode
+3. Build and run the project
+4. The app will appear in your menubar as a cube icon
+
+## Usage
+
+### Menubar Interface
+
+Click the cube icon in your menubar to open the menu:
+
+```
+Machines
+  ● podman-machine-default ▶
+    Running
+    CPUs: 5
+    ────────────────
+    Stop Machine
+────────────────
+Containers
+  ● houp-postgres-test-1 ▶
+    Image: docker.io/library/postgres:17
+    Status: Up 45 minutes
+    Ports: 5434:5432
+    ID: 17b99394c252
+────────────────
+Images
+  docker.io/library/postgres:17 - 460.90 MB ▶
+    ID: 19b825cafdd2
+────────────────
+Refresh ⌘R
+────────────────
+Quit ⌘Q
+```
+
+### Menu Structure
+
+1. **Machines Section**
+   - Status indicator: ● (running) / ○ (stopped)
+   - Click any machine for submenu with details and start/stop actions
+   - See CPU count and machine status
+
+2. **Containers Section**
+   - List of all containers with status indicators
+   - Click any container for submenu with:
+     - Image name
+     - Current status
+     - Port mappings (host:container)
+     - Short container ID
+
+3. **Images Section**
+   - List of available images (limited to 10)
+   - Image name and formatted size
+   - Click for image ID
+
+### Controls
+
+- **Refresh**: Press ⌘R or click Refresh to update data (menu will close)
+- **Machine Control**: Hover over a machine and click Start/Stop in submenu
+- **Quit**: Press ⌘Q or click Quit to exit the app
+- **Auto-refresh**: Data updates automatically every 5 seconds
+
+## Architecture
+
+### Key Components
+
+- `PodmanBarApp.swift`: Main app structure with NSStatusItem and NSMenu
+- `PodmanService.swift`: Service layer for executing Podman CLI commands
+- `ContentView.swift`: Legacy SwiftUI views (unused in menu mode)
+
+### Data Models
+
+- `PodmanMachine`: Machine information and status
+- `PodmanContainer`: Container details with port information
+- `PodmanImage`: Image metadata with formatted display helpers
+- `PodmanPort`: Port mapping details
+
+### Security
+
+- App sandboxing disabled (required for Podman CLI execution)
+- Minimal entitlements
+- Template rendering for menubar icon
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"No machines found"**: Ensure Podman is installed and a machine exists
+2. **Build failures**: Check Xcode version and signing certificates
+3. **Permission errors**: Verify entitlements allow Podman execution
+
+### Podman Setup
+
+```bash
+# Install Podman (if not already installed)
+brew install podman
+
+# Create a machine (if needed)
+podman machine init
+
+# Start the machine
+podman machine start
+```
+
+## License
+
+This project is provided as-is for educational and personal use.
+
+## Contributing
+
+Feel free to submit issues and pull requests to improve the app.
