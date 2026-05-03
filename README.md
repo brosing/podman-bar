@@ -11,7 +11,7 @@ A minimal macOS menubar app for managing [Podman](https://podman.io/) machines, 
 ![PodmanBar Screenshot](./ss.png)
 
 Download the dmg file:
-[release 1.0.0](https://github.com/brosing/podman-bar/releases/tag/1.0.0)
+[release 1.0.1](https://github.com/brosing/podman-bar/releases/tag/1.0.1)
 
 ## Features
 
