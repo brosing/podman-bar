@@ -19,11 +19,15 @@ struct PodmanBarApp: App {
     }
 }
 
-class AppDelegate: NSObject, NSApplicationDelegate {
+class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var statusItem: NSStatusItem?
     var podmanService = PodmanService()
     var loadingTimer: Timer?
     var isLoading = false
+    var menuRefreshTimer: Timer?
+    var lastMachineStates: [String: Bool] = [:]  // name -> running
+    var lastContainerStates: [String: Bool] = [:]  // id -> isRunning
+    var lastImageIDs: [String] = []
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -47,63 +51,61 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         
-        // Refresh data periodically
-        Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { _ in
-            self.podmanService.refreshData()
-            self.updateMenu()
-        }
+        // Initial data load for icon status
+        podmanService.refreshData()
     }
     
     func setupMenu() {
         let menu = NSMenu()
-        
-        // Machines Section
-        let machinesHeader = NSMenuItem(title: "Machines", action: nil, keyEquivalent: "")
-        machinesHeader.attributedTitle = NSAttributedString(
-            string: "Machines",
-            attributes: [.font: NSFont.boldSystemFont(ofSize: 12)]
-        )
-        machinesHeader.isEnabled = false
-        menu.addItem(machinesHeader)
-        
-        menu.addItem(NSMenuItem.separator())
-        
-        // Container placeholder items
-        let containersHeader = NSMenuItem(title: "Containers", action: nil, keyEquivalent: "")
-        containersHeader.attributedTitle = NSAttributedString(
-            string: "Containers",
-            attributes: [.font: NSFont.boldSystemFont(ofSize: 12)]
-        )
-        containersHeader.isEnabled = false
-        
-        let imagesHeader = NSMenuItem(title: "Images", action: nil, keyEquivalent: "")
-        imagesHeader.attributedTitle = NSAttributedString(
-            string: "Images",
-            attributes: [.font: NSFont.boldSystemFont(ofSize: 12)]
-        )
-        imagesHeader.isEnabled = false
-        
-        // Refresh action
-        menu.addItem(NSMenuItem.separator())
-        let refreshItem = NSMenuItem(title: "Refresh", action: #selector(refreshData), keyEquivalent: "r")
-        refreshItem.target = self
-        menu.addItem(refreshItem)
-        
-        // Quit action
-        menu.addItem(NSMenuItem.separator())
-        let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
-        
+        menu.delegate = self
         statusItem?.menu = menu
-        
-        // Initial data load
-        podmanService.refreshData()
         updateMenu()
     }
     
-    func updateMenu() {
-        let menu = NSMenu()
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        updateMenu()
+    }
+    
+    func menuWillOpen(_ menu: NSMenu) {
+        // Refresh immediately when menu opens
+        podmanService.refreshData()
+        updateMenu(force: true)
+        
+        // Start periodic refresh while menu is open (for live status)
+        menuRefreshTimer?.invalidate()
+        menuRefreshTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { _ in
+            self.podmanService.refreshData()
+            self.updateMenu()
+        }
+        // Allow firing during event tracking so updates happen while menu visible
+        if let timer = menuRefreshTimer {
+            RunLoop.current.add(timer, forMode: .eventTracking)
+        }
+    }
+    
+    func menuDidClose(_ menu: NSMenu) {
+        // Stop refresh timer when menu closes to save CPU
+        menuRefreshTimer?.invalidate()
+        menuRefreshTimer = nil
+    }
+    
+    func updateMenu(force: Bool = false) {
+        guard let menu = statusItem?.menu else { return }
+        
+        // Check if anything actually changed
+        let currentMachineStates = Dictionary(uniqueKeysWithValues: podmanService.machines.map { ($0.name, $0.running) })
+        let currentContainerStates = Dictionary(uniqueKeysWithValues: podmanService.containers.map { ($0.containerID, containerIsRunning($0)) })
+        let currentImageIDs = podmanService.images.map { $0.imageID }.sorted()
+        
+        if !force && currentMachineStates == lastMachineStates && currentContainerStates == lastContainerStates && currentImageIDs == lastImageIDs {
+            return  // Nothing changed, skip UI update
+        }
+        
+        lastMachineStates = currentMachineStates
+        lastContainerStates = currentContainerStates
+        lastImageIDs = currentImageIDs
+        
+        menu.removeAllItems()
         
         // Machines Section
         let machinesHeader = NSMenuItem(title: "Machines", action: nil, keyEquivalent: "")
@@ -175,9 +177,12 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         } else {
             // Show message to start machine
             menu.addItem(NSMenuItem.separator())
-            let startMachineItem = NSMenuItem(title: "Start a machine to view containers & images", action: nil, keyEquivalent: "")
-            startMachineItem.isEnabled = false
-            menu.addItem(startMachineItem)
+            let startMachineItem1 = NSMenuItem(title: "Start a machine to view", action: nil, keyEquivalent: "")
+            startMachineItem1.isEnabled = false
+            menu.addItem(startMachineItem1)
+            let startMachineItem2 = NSMenuItem(title: "containers & images", action: nil, keyEquivalent: "")
+            startMachineItem2.isEnabled = false
+            menu.addItem(startMachineItem2)
         }
         
         // Refresh and Quit
@@ -190,8 +195,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let quitItem = NSMenuItem(title: "Quit", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
-        
-        statusItem?.menu = menu
     }
     
     func createMachineMenuItem(_ machine: PodmanMachine) -> NSMenuItem {
@@ -364,20 +367,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     @objc func toggleMachine(_ sender: NSMenuItem) {
         guard let machine = sender.representedObject as? PodmanMachine else { return }
+        let wasRunning = machine.running
         
         Task {
-            if machine.running {
+            if wasRunning {
                 _ = await podmanService.stopMachine(machine.name)
             } else {
                 _ = await podmanService.startMachine(machine.name)
             }
             
-            // Wait a moment for machine state to stabilize
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-            
-            await MainActor.run {
-                self.podmanService.refreshData()
-                self.updateMenu()
+            // Poll until machine state changes, then refresh containers/images
+            for _ in 0..<10 {
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                await self.podmanService.refreshData()
+                await MainActor.run {
+                    self.updateMenu(force: true)
+                }
+                // Check if the machine state has flipped
+                let machineNow = self.podmanService.machines.first { $0.name == machine.name }
+                if let m = machineNow, m.running != wasRunning {
+                    // Machine state changed — do one more refresh to get containers/images
+                    try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                    await self.podmanService.refreshData()
+                    await MainActor.run {
+                        self.updateMenu(force: true)
+                    }
+                    return
+                }
             }
         }
     }
@@ -478,12 +494,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 result = await podmanService.startContainer(container.containerID)
             }
             
-            await MainActor.run {
-                switch result {
-                case .success:
-                    self.podmanService.refreshData()
-                    self.updateMenu()
-                case .failure(let error):
+            switch result {
+            case .success:
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
+                await self.podmanService.refreshData()
+                await MainActor.run {
+                    self.updateMenu(force: true)
+                }
+            case .failure(let error):
+                await MainActor.run {
                     self.showError("Failed to \(isRunning ? "stop" : "start") container: \(error.localizedDescription)")
                 }
             }

@@ -20,7 +20,7 @@ Download the dmg file:
 - **Machine Management**: Start and stop Podman machines with visual status indicators
 - **Container Overview**: View running containers with port information
 - **Image Management**: List available Docker/Podman images
-- **Real-time Updates**: Auto-refresh every 5 seconds, manual refresh with ⌘R
+- **On-demand Updates**: Refreshes when menu opens, live updates while menu is visible, manual refresh with ⌘R
 - **Clean UI**: Sectioned menu following Apple's HIG guidelines
 
 ## Requirements
@@ -88,10 +88,10 @@ Quit ⌘Q
 
 ### Controls
 
-- **Refresh**: Press ⌘R or click Refresh to update data (menu will close)
+- **Refresh**: Press ⌘R or click Refresh to update data (menu stays open)
 - **Machine Control**: Hover over a machine and click Start/Stop in submenu
 - **Quit**: Press ⌘Q or click Quit to exit the app
-- **Auto-refresh**: Data updates automatically every 5 seconds
+- **Live updates**: Status refreshes automatically while menu is open
 
 ## Architecture
 

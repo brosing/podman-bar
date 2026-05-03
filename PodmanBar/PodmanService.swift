@@ -231,32 +231,36 @@ class PodmanService: ObservableObject {
             ]))
         }
         
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: podmanPath)
-        process.arguments = [command] + arguments
-        
-        // Set up environment with PATH
-        var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        process.environment = environment
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        
-        do {
-            try process.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
-            process.waitUntilExit()
-            
-            if process.terminationStatus == 0 {
-                return .success(output)
-            } else {
-                return .failure(NSError(domain: "PodmanError", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: output]))
+        let executablePath = podmanPath
+        return await withCheckedContinuation { continuation in
+            Task.detached {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: executablePath)
+                process.arguments = [command] + arguments
+                
+                var environment = ProcessInfo.processInfo.environment
+                environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+                process.environment = environment
+                
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+                
+                do {
+                    try process.run()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    process.waitUntilExit()
+                    
+                    if process.terminationStatus == 0 {
+                        continuation.resume(returning: .success(output))
+                    } else {
+                        continuation.resume(returning: .failure(NSError(domain: "PodmanError", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: output])))
+                    }
+                } catch {
+                    continuation.resume(returning: .failure(error))
+                }
             }
-        } catch {
-            return .failure(error)
         }
     }
     
@@ -268,32 +272,36 @@ class PodmanService: ObservableObject {
             ]))
         }
         
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: podmanRemotePath)
-        process.arguments = [command] + arguments
-        
-        // Set up environment with PATH
-        var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-        process.environment = environment
-        
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
-        
-        do {
-            try process.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            let output = String(data: data, encoding: .utf8) ?? ""
-            process.waitUntilExit()
-            
-            if process.terminationStatus == 0 {
-                return .success(output)
-            } else {
-                return .failure(NSError(domain: "PodmanError", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: output]))
+        let executablePath = podmanRemotePath
+        return await withCheckedContinuation { continuation in
+            Task.detached {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: executablePath)
+                process.arguments = [command] + arguments
+                
+                var environment = ProcessInfo.processInfo.environment
+                environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+                process.environment = environment
+                
+                let pipe = Pipe()
+                process.standardOutput = pipe
+                process.standardError = pipe
+                
+                do {
+                    try process.run()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    let output = String(data: data, encoding: .utf8) ?? ""
+                    process.waitUntilExit()
+                    
+                    if process.terminationStatus == 0 {
+                        continuation.resume(returning: .success(output))
+                    } else {
+                        continuation.resume(returning: .failure(NSError(domain: "PodmanError", code: Int(process.terminationStatus), userInfo: [NSLocalizedDescriptionKey: output])))
+                    }
+                } catch {
+                    continuation.resume(returning: .failure(error))
+                }
             }
-        } catch {
-            return .failure(error)
         }
     }
     
